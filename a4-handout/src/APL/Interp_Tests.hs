@@ -56,7 +56,72 @@ pureTests =
       --
       testCase "Div0" $
         eval' (Div (CstInt 7) (CstInt 0))
-          @?= ([], Left "Division by zero")
+          @?= ([], Left "Division by zero"),
+      --
+      testCase "Break outside loop" $
+        eval' (Break (CstBool True))
+          @?= ([], Left "Break outside loop"),
+      --
+      testCase "Break stops loop immediately" $
+        eval'
+          ( ForLoop
+              ("p", CstInt 0)
+              ("i", CstInt 100)
+              (Let "_" (Break (CstBool True)) (Var "i"))
+          )
+          @?= ([], Right (ValBool True)),
+      --
+      testCase "Loop without break runs to completion" $
+        eval'
+          ( ForLoop
+              ("p", CstInt 0)
+              ("i", CstInt 5)
+              (Add (Var "p") (Var "i"))
+          )
+          @?= ([], Right (ValInt 10)), 
+      --
+      testCase "Break on a later iteration" $
+        eval'
+          ( ForLoop
+              ("p", CstInt 0)
+              ("i", CstInt 100)
+              ( If
+                  (Eql (Var "i") (CstInt 3))
+                  (Break (Var "p"))
+                  (Add (Var "p") (Var "i"))
+              )
+          )
+          @?= ([], Right (ValInt 3)), -- 0+1+2, breaks when i=3
+      --
+      testCase "Inner loop's break doesn't escape to outer loop" $
+        eval'
+          ( ForLoop
+              ("outer_p", CstInt 0)
+              ("outer_i", CstInt 3)
+              ( ForLoop
+                  ("inner_p", CstInt 0)
+                  ("inner_i", CstInt 100)
+                  ( If
+                      (Eql (Var "inner_i") (CstInt 2))
+                      (Break (Var "inner_p"))
+                      (Var "inner_p")
+                  )
+              )
+          )
+          @?= ([], Right (ValInt 0)), -- outer loop runs all 3 iterations fine
+      --
+      testCase "localEnv propagates into a nested loop body" $
+        eval'
+          ( Let
+              "x"
+              (CstInt 10)
+              ( ForLoop
+                  ("p", CstInt 0)
+                  ("i", CstInt 1)
+                  (Add (Var "p") (Var "x"))
+              )
+          )
+          @?= ([], Right (ValInt 10))
     ]
 
 ioTests :: TestTree
@@ -71,7 +136,7 @@ ioTests =
             runEvalIO $ do
               evalPrint s1
               evalPrint s2
-        (out, res) @?= ([s1, s2], Right ())
+        (out, res) @?= ([s1, s2], Right ()),
         -- NOTE: This test will give a runtime error unless you replace the
         -- version of `eval` in `APL.Eval` with a complete version that supports
         -- `Print`-expressions. Uncomment at your own risk.
@@ -83,4 +148,18 @@ ioTests =
         --            Print "This is 1" $
         --              CstInt 1
         --    (out, res) @?= (["This is 1: 1", "This is also 1: 1"], Right $ ValInt 1)
+        --
+      testCase "Break outside loop (IO)" $ do
+        (out, res) <- captureIO [] $ evalIO' (Break (CstBool True))
+        (out, res) @?= ([], Left "Break outside loop"),
+      --
+      testCase "Break stops loop immediately (IO)" $ do
+        (out, res) <-
+          captureIO [] $
+            evalIO' $
+              ForLoop
+                ("p", CstInt 0)
+                ("i", CstInt 100)
+                (Let "_" (Break (CstBool True)) (Var "i"))
+        (out, res) @?= ([], Right (ValBool True))
     ]

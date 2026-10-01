@@ -63,7 +63,7 @@ eval (ForLoop (loopparam, initial) (iv, bound) body) = do
   bound_v <- eval bound
   case bound_v of
     ValInt bound_int ->
-      loop 0 bound_int initial_v
+      looping $ loop 0 bound_int initial_v
     _ ->
       failure "Non-integral loop bound"
   where
@@ -87,3 +87,17 @@ eval (Apply e1 e2) = do
       failure "Cannot apply non-function"
 eval (TryCatch e1 e2) =
   eval e1 `catch` eval e2
+
+
+-- Task 4
+-- 
+eval (Break e) = do
+  v <- eval e 
+  breakLoop v
+
+
+
+
+
+
+
