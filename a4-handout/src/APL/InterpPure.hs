@@ -11,6 +11,12 @@ runEval = runEval' envEmpty stateInitial
     runEval' r s (Free (PrintOp p m)) =
       let (ps, res) = runEval' r s m
        in (p : ps, res)
+    -- Task1
+    runEval' r s (Free (TryCatchOp m1 m2 k)) =
+      let (ps, res) = runEval' r s (m1 >>= k)
+      in case res of
+        Right x -> (ps, Right x)
+        Left _  -> runEval' r s (m2 >>= k)
 
     -- Task4   
     runEval' _ _ (Free (ErrorOp e)) = ([], Left e)

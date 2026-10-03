@@ -75,6 +75,7 @@ data EvalOp a
   | ErrorOp Error
   | BreakOp Val
   | LoopOp (EvalM Val) (Val -> a)
+  | TryCatchOp (EvalM Val) (EvalM Val) (Val -> a)
 
 instance Functor EvalOp where
   fmap f (ReadOp k) = ReadOp $ f . k
@@ -82,6 +83,7 @@ instance Functor EvalOp where
   fmap _ (ErrorOp e) = ErrorOp e
   fmap _ (BreakOp v) = BreakOp v
   fmap f (LoopOp m k) = LoopOp m $ f . k
+  fmap f (TryCatchOp m1 m2 k) = TryCatchOp m1 m2 $ f . k
 
 type EvalM a = Free EvalOp a
 
@@ -103,6 +105,7 @@ localEnv f = modifyEffects g
     -- TODO: add cases for TryCatchOp, TransactionOp, and as necessary for the
     -- effects you add for looping.
     g (LoopOp m k) = LoopOp (localEnv f m) k
+    g (TryCatchOp m1 m2 k) = TryCatchOp (localEnv f m1) (localEnv f m2) k
     g op = op
 
 evalPrint :: String -> EvalM ()
