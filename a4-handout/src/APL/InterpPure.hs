@@ -17,10 +17,8 @@ runEval = runEval' envEmpty stateInitial
       in case res of
         Right x -> (ps, Right x)
         Left _  -> runEval' r s (m2 >>= k)
-
-    -- Task4   
-    runEval' _ _ (Free (ErrorOp e)) = ([], Left e)
-    -- Basically the same as A2, with the interpreter included this time
+    -- Task2
+        -- Basically the same as A2, with the interpreter included this time
     runEval' r s (Free (KvGetOp key kVal)) =
       case lookup key s of
         Just value -> runEval' r s (kVal value)
@@ -29,6 +27,9 @@ runEval = runEval' envEmpty stateInitial
       let otherEntries = filter (\(storedKey, _) -> storedKey /= key) s
           newStore = (key, value) : otherEntries
       in runEval' r newStore next
+      
+    -- Task4   
+    runEval' _ _ (Free (ErrorOp e)) = ([], Left e)
     runEval' _ _ (Free (BreakOp _)) = ([], Left "Break outside loop")
     runEval' r s (Free (LoopOp m k)) = 
       case runLoopBody r s m of 
