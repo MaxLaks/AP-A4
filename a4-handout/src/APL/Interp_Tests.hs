@@ -56,7 +56,15 @@ pureTests =
       --
       testCase "Div0" $
         eval' (Div (CstInt 7) (CstInt 0))
-          @?= ([], Left "Division by zero")
+          @?= ([], Left "Division by zero"),
+      --
+      testCase "put then get" $
+        runEval
+          (do
+            evalKvPut (ValInt 67) (ValInt 420)
+            evalKvGet (ValInt 67)
+          )
+          @?= ([], Right (ValInt 420))
     ]
 
 ioTests :: TestTree

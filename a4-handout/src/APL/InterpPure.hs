@@ -12,3 +12,12 @@ runEval = runEval' envEmpty stateInitial
       let (ps, res) = runEval' r s m
        in (p : ps, res)
     runEval' _ _ (Free (ErrorOp e)) = ([], Left e)
+    -- Basically the same as A2, with the interpreter included this time
+    runEval' r s (Free (KvGetOp key kVal)) =
+      case lookup key s of
+        Just value -> runEval' r s (kVal value)
+        Nothing -> ([], Left ("Non-existing key: " ++ show key))
+    runEval' r s (Free (KvPutOp key value next)) =
+      let otherEntries = filter (\(storedKey, _) -> storedKey /= key) s
+          newStore = (key, value) : otherEntries
+      in runEval' r newStore next
