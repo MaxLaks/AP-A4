@@ -66,3 +66,38 @@ runEvalIO evalm = do
       putStrLn p
       runEvalIO' r db m
     runEvalIO' _ _ (Free (ErrorOp e)) = pure $ Left e
+    -- Task 1
+    runEvalIO' r db (Free (TryCatchOp m1 m2 k)) = do
+      res1 <- runEvalIO' r db m1
+      case res1 of
+        Right v -> runEvalIO' r db (k v)
+        Left _ -> do
+          res2 <- runEvalIO' r db m2
+          case res2 of
+            Right v -> runEvalIO' r db (k v)
+            Left e -> pure $ Left e
+    -- Task 4
+    runEvalIO' _ _ (Free (BreakOp e)) = pure $ Left "Break outside loop"
+    runEvalIO' r db (Free (LoopOp m k)) = do
+      res <- runLoopBodyIO r db m
+      case res of 
+        Left e -> pure $ Left e 
+        Right v -> runEvalIO' r db (k v)
+    
+    -- EvalM a is changed to EvalM Val in the following function because breakOp v always carries a concrete Val.
+    runLoopBodyIO :: Env -> FilePath -> EvalM Val -> IO (Either Error Val)
+    runLoopBodyIO _ _ (Pure x) = pure $ pure x
+    runLoopBodyIO r db (Free (ReadOp k)) = runLoopBodyIO r db $ k r
+    runLoopBodyIO r db (Free (PrintOp p m)) = do
+      putStrLn p
+      runLoopBodyIO r db m
+    runLoopBodyIO _ _ (Free (ErrorOp e)) = pure $ Left e
+    -- Task 4
+    runLoopBodyIO _ _ (Free (BreakOp v)) = pure $ Right v
+    runLoopBodyIO r db (Free (LoopOp m k)) = do
+      res <- runLoopBodyIO r db m
+      case res of 
+        Left e -> pure $ Left e 
+        Right v -> runLoopBodyIO r db (k v)
+
+
