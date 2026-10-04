@@ -58,6 +58,13 @@ pureTests =
         eval' (Div (CstInt 7) (CstInt 0))
           @?= ([], Left "Division by zero"),
       --
+      testCase "put then get" $
+        runEval
+          (do
+            evalKvPut (ValInt 67) (ValInt 420)
+            evalKvGet (ValInt 67)
+          )
+          @?= ([], Right (ValInt 420))
       testCase "Break outside loop" $
         eval' (Break (CstBool True))
           @?= ([], Left "Break outside loop"),
