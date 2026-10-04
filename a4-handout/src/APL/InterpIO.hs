@@ -76,6 +76,27 @@ runEvalIO evalm = do
           case res2 of
             Right v -> runEvalIO' r db (k v)
             Left e -> pure $ Left e
+
+    -- Task 2
+    runEvalIO' r db (Free (KvGetOp key kVal)) = do
+      dbResult <- readDB db
+      case dbResult of
+        Left err -> pure (Left err) -- no db
+        Right dbState -> do -- same as InterPure.hs
+            case lookup key dbState of
+              Just value -> runEvalIO' r db (kVal value)
+              Nothing -> pure (Left ("Non-existing key: " ++ show key))
+
+    runEvalIO' r db (Free (KvPutOp key value next)) = do
+      dbResult <- readDB db
+      case dbResult of
+        Left err -> pure (Left err)
+        Right dbState -> do 
+          let otherEntries = filter (\(storedKey, _) -> storedKey /= key) dbState
+              newStore = (key, value) : otherEntries
+          writeDB db newStore
+          runEvalIO' r db next
+
     -- Task 4
     runEvalIO' _ _ (Free (BreakOp e)) = pure $ Left "Break outside loop"
     runEvalIO' r db (Free (LoopOp m k)) = do
@@ -91,8 +112,8 @@ runEvalIO evalm = do
     runLoopBodyIO r db (Free (PrintOp p m)) = do
       putStrLn p
       runLoopBodyIO r db m
+
     runLoopBodyIO _ _ (Free (ErrorOp e)) = pure $ Left e
-    -- Task 4
     runLoopBodyIO _ _ (Free (BreakOp v)) = pure $ Right v
     runLoopBodyIO r db (Free (LoopOp m k)) = do
       res <- runLoopBodyIO r db m

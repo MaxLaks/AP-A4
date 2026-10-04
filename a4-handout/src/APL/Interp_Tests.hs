@@ -57,7 +57,7 @@ pureTests =
       testCase "Div0" $
         eval' (Div (CstInt 7) (CstInt 0))
           @?= ([], Left "Division by zero"),
-      --
+      -- Task 2:
       testCase "put then get" $
         runEval
           (do
@@ -65,6 +65,53 @@ pureTests =
             evalKvGet (ValInt 67)
           )
           @?= ([], Right (ValInt 420)),
+      ---
+      testCase "overwrite an existing key" $
+        runEval
+          (do
+            evalKvPut (ValInt 67) (ValInt 420)
+            evalKvPut (ValInt 67) (ValBool False)
+            evalKvGet (ValInt 67)
+          )
+          @?= ([], Right (ValBool False)),
+      ---
+      testCase "overwrite preserves other keys" $
+        runEval
+          (do
+            evalKvPut (ValInt 1) (ValInt 10)
+            evalKvPut (ValInt 2) (ValInt 20)
+            evalKvPut (ValInt 1) (ValInt 30)
+            first <- evalKvGet (ValInt 1)
+            second <- evalKvGet (ValInt 2)
+            pure (first, second)
+          )
+          @?= ([], Right (ValInt 30, ValInt 20)),
+      ---
+      testCase "missing key" $
+        runEval (evalKvGet (ValInt 99))
+          @?= ([], Left "Non-existing key: ValInt 99"),
+      ---
+      testCase "get preserves the entry and continues" $
+        runEval
+          (do
+            evalKvPut (ValBool True) (ValInt 42)
+            first <- evalKvGet (ValBool True)
+            evalPrint "Retrieved"
+            second <- evalKvGet (ValBool True)
+            pure (first, second)
+          )
+          @?= (["Retrieved"], Right (ValInt 42, ValInt 42)),
+      ---
+      testCase "missing key stops execution but keeps earlier output" $
+        runEval
+          (do
+            evalPrint "Before lookup"
+            value <- evalKvGet (ValInt 99)
+            evalPrint "After lookup"
+            pure value
+          )
+          @?= (["Before lookup"], Left "Non-existing key: ValInt 99"),
+      -- Task 4:
       testCase "Break outside loop" $
         eval' (Break (CstBool True))
           @?= ([], Left "Break outside loop"),
@@ -156,6 +203,24 @@ ioTests =
         --              CstInt 1
         --    (out, res) @?= (["This is 1: 1", "This is also 1: 1"], Right $ ValInt 1)
         --
+      -- Task 2:
+      testCase "IO put then get" $ do
+        result <- runEvalIO $ do
+          evalKvPut (ValInt 67) (ValInt 420)
+          evalKvGet (ValInt 67)
+        result @?= Right (ValInt 420),
+      ---
+      testCase "IO overwrite an existing key" $ do
+        result <- runEvalIO $ do
+          evalKvPut (ValInt 67) (ValInt 420)
+          evalKvPut (ValInt 67) (ValBool False)
+          evalKvGet (ValInt 67)
+        result @?= Right (ValBool False),
+      -- Step 7 behavior
+      testCase "IO missing key" $ do
+        result <- runEvalIO (evalKvGet (ValInt 99))
+        result @?= Left "Non-existing key: ValInt 99",
+      -- Task 4:
       testCase "Break outside loop (IO)" $ do
         (out, res) <- captureIO [] $ evalIO' (Break (CstBool True))
         (out, res) @?= ([], Left "Break outside loop"),
