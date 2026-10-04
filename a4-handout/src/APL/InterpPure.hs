@@ -17,6 +17,13 @@ runEval = runEval' envEmpty stateInitial
       in case res of
         Right x -> (ps, Right x)
         Left _  -> runEval' r s (m2 >>= k)
+    -- Task 3
+    runEval' r s (Free (TransactionOp m k)) =
+      case runEval' r s m of 
+        (out, Left e) -> (out, Left e)
+        (out, Right (v, s')) ->
+          let (out', res) = runEval' r s' (k v)
+            in (out ++ out', res)
 
     -- Task4   
     runEval' _ _ (Free (ErrorOp e)) = ([], Left e)

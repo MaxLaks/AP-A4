@@ -76,6 +76,19 @@ runEvalIO evalm = do
           case res2 of
             Right v -> runEvalIO' r db (k v)
             Left e -> pure $ Left e
+    -- Task 3
+    runEvalIO' r db (Free (TransactionOp m k)) = do
+      res <- withTempDB $ \tmp -> do
+        copyDB db tmp 
+        res' <- runEvalIO' r tmp m 
+        case res' of
+          Left e -> pure $ Left e 
+          Right v -> do 
+            copyDB tmp db 
+            pure $ Right v 
+      case res of 
+        Left e -> pure $ Left e 
+        Right v -> runEvalIO' r db (k v)
     -- Task 4
     runEvalIO' _ _ (Free (BreakOp e)) = pure $ Left "Break outside loop"
     runEvalIO' r db (Free (LoopOp m k)) = do
@@ -96,6 +109,19 @@ runEvalIO evalm = do
     runLoopBodyIO _ _ (Free (BreakOp v)) = pure $ Right v
     runLoopBodyIO r db (Free (LoopOp m k)) = do
       res <- runLoopBodyIO r db m
+      case res of 
+        Left e -> pure $ Left e 
+        Right v -> runLoopBodyIO r db (k v)
+    -- Task 3
+    runLoopBodyIO r db (Free (TransactionOp m k)) = do
+      res <- withTempDB $ \tmp -> do
+        copyDB db tmp 
+        res' <- runLoopBodyIO r tmp m 
+        case res' of
+          Left e -> pure $ Left e 
+          Right v -> do 
+            copyDB tmp db 
+            pure $ Right v 
       case res of 
         Left e -> pure $ Left e 
         Right v -> runLoopBodyIO r db (k v)

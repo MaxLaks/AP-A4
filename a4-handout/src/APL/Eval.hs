@@ -89,6 +89,10 @@ eval (TryCatch e1 e2) =
   eval e1 `catch` eval e2
 
 
+
+-- Task 3
+eval (Transaction e) = transaction (eval e)
+
 -- Task 4
 -- 
 eval (Break e) = do
