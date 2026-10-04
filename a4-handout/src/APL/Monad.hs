@@ -26,6 +26,7 @@ where
 
 import APL.AST (Exp (..), VName)
 import Control.Monad (ap)
+import GHC.OldList (zip4)
 
 data Val
   = ValInt Integer
@@ -46,6 +47,7 @@ envExtend v val env = (v, val) : env
 envLookup :: VName -> Env -> Maybe Val
 envLookup v env = lookup v env
 
+-- k/v store
 type State = [(Val, Val)]
 
 stateInitial :: State
@@ -73,6 +75,8 @@ data EvalOp a
   = ReadOp (Env -> a)
   | PrintOp String a
   | ErrorOp Error
+  | KvGetOp Val (Val -> a)
+  | KvPutOp Val Val a
   | TransactionOp (EvalM Val) (Val -> a)
   | BreakOp Val
   | LoopOp (EvalM Val) (Val -> a)
@@ -82,6 +86,9 @@ instance Functor EvalOp where
   fmap f (ReadOp k) = ReadOp $ f . k
   fmap f (PrintOp p m) = PrintOp p $ f m
   fmap _ (ErrorOp e) = ErrorOp e
+  fmap f (KvGetOp key x) = KvGetOp key $ f . x 
+  fmap f (KvPutOp key value z) = KvPutOp key value (f z)
+
   fmap f (TransactionOp m k) = TransactionOp m $ f . k
   fmap _ (BreakOp v) = BreakOp v
   fmap f (LoopOp m k) = LoopOp m $ f . k
@@ -121,10 +128,10 @@ catch :: EvalM Val -> EvalM Val -> EvalM Val
 catch = error "TODO"
 
 evalKvGet :: Val -> EvalM Val
-evalKvGet = error "TODO"
+evalKvGet key = Free (KvGetOp key (\value -> pure value))     
 
 evalKvPut :: Val -> Val -> EvalM ()
-evalKvPut = error "TODO"
+evalKvPut key value = Free (KvPutOp key value $ pure())
 
 transaction :: EvalM Val -> EvalM Val
 transaction m = Free $ TransactionOp m pure

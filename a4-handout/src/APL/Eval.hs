@@ -88,6 +88,33 @@ eval (Apply e1 e2) = do
 eval (TryCatch e1 e2) =
   eval e1 `catch` eval e2
 
+-- Implementation of Eval using the evalPrint helper function.
+-- EvalM and all functions that use it has been extended with a notion of state.
+-- Evaluates e and pattern matches over Int, Bool, and Fun, then
+-- using evalPrint to show.
+eval (Print s e) = do
+  e1 <- eval e
+  case e1 of
+    ValInt x -> do
+      evalPrint(s ++ ": " ++ show x)
+      pure e1
+    ValBool x -> do
+      evalPrint(s ++ ": " ++ show x)
+      pure e1
+    ValFun _ _ _ -> do
+      evalPrint(s ++ ": #")
+      pure e1
+-- Key-Value: Put
+eval (KvPut keyExp valueExp) = do
+  key <- eval keyExp
+  value <- eval valueExp
+  evalKvPut key value
+  pure value
+
+-- Key-Value: Get
+eval (KvGet keyExp) = do
+  key <- eval keyExp
+  evalKvGet key
 
 
 -- Task 3
